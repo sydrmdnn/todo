@@ -3,80 +3,42 @@
     <input type="text" class="todo-input" placeholder="Things need to be done.." v-model="newTodo" v-on:keyup.enter="addTodo">
 
     <div class="top-section">
-      <div>
-        <label><input type="checkbox" class="checkbox" v-bind:checked="!anyRemaining" v-on:change="checkAllTodos" v-if="filter == 'all'"></label>
-      </div>
-      <div>
-        <button class="button">{{ remainingCount }} active item</button>
-      </div>
+      <TodoItemCheckAll></TodoItemCheckAll>
+      <TodoItemCounter></TodoItemCounter>
     </div>
 
     <transition-group name="fade" enter-active-class="animated fadeInUp" leave-active-class="animated fadeOutDown">
-      <div class="todo-item" v-for="(todo, index) in todosFiltered" v-bind:key="todo.id">
-        <div class="todo-item-left">
-          <div>
-            <input class="checkbox" type="checkbox" v-model="todo.completed">
-          </div>
-          <div class="todo-item-label" v-if="!todo.editing" v-on:dblclick="editTodo(todo)" v-bind:class="{ completed : todo.completed }">{{ todo.title }}</div>
-          <input type="text" class="todo-item-edit" v-model="todo.title" v-else v-on:blur="doneEdit(todo)" v-on:keyup.enter="doneEdit(todo)" v-on:keyup.esc="cancelEdit(todo)" v-focus>
-        </div>
-        <div class="remove-item" v-on:click="removeTodo(index)">
-          &times;
-        </div>
-      </div>
+      <TodoItem v-for="todo in todosFiltered" v-bind:key="todo.id" v-bind:todo="todo" v-bind:checkAll="!anyRemaining"></TodoItem>
     </transition-group>
 
     <div class="bottom-section">
-      <div>
-        <button class="button" v-bind:class="{ active : filter == 'all' }" v-on:click="filter = 'all'">All</button>
-        <button class="button" v-bind:class="{ active : filter == 'active' }" v-on:click="filter = 'active'">Active</button>
-        <button class="button" v-bind:class="{ active : filter == 'completed' }" v-on:click="filter = 'completed'">Completed</button>
-      </div>
-      <div>
-        <transition name="fade">
-          <button class="button" v-if="showClearCompletedButton" v-on:click="clearCompleted">Clear Completed</button>
-        </transition>
-      </div>
+      <TodoItemFilter></TodoItemFilter>
+      <TodoItemClear></TodoItemClear>
     </div>
   </div>
 </template>
 
 <script>
+import TodoItem from './TodoItem'
+import TodoItemCounter from './TodoItemCounter'
+import TodoItemCheckAll from './TodoItemCheckAll'
+import TodoItemFilter from './TodoItemFilter'
+import TodoItemClear from './TodoItemClear'
+
 export default {
   name: 'TodoList',
+  components: {
+    TodoItem,
+    TodoItemCounter,
+    TodoItemCheckAll,
+    TodoItemFilter,
+    TodoItemClear
+  },
   data () {
     return {
       newTodo: '',
       idForTodo: 4,
-      oldTitle: '',
-      filter: 'all',
-      todos: [
-        {
-          id: 1,
-          title: 'Finish Vue todo app part 1',
-          completed: false,
-          editing: false
-        },
-        {
-          id: 2,
-          title: 'Subuh Prayer',
-          completed: false,
-          editing: false
-        },
-        {
-          id: 3,
-          title: 'Makan',
-          completed: false,
-          editing: false
-        }
-      ]
-    }
-  },
-  directives: {
-    focus: {
-      inserted: function (el) {
-        el.focus()
-      }
+      oldTitle: ''
     }
   },
   computed: {
@@ -84,20 +46,10 @@ export default {
       return this.todos.filter(todo => !todo.completed).length
     },
     anyRemaining () {
-      return this.remainingCount !== 0
+      return this.$store.getters.anyRemaining
     },
     todosFiltered () {
-      if (this.filter === 'all') {
-        return this.todos
-      } else if (this.filter === 'active') {
-        return this.todos.filter(todo => !todo.completed)
-      } else if (this.filter === 'completed') {
-        return this.todos.filter(todo => todo.completed)
-      }
-      return this.todos
-    },
-    showClearCompletedButton () {
-      return this.todos.filter(todo => todo.completed).length > 0
+      return this.$store.getters.todosFiltered
     }
   },
   methods: {
@@ -105,36 +57,12 @@ export default {
       if (this.newTodo.trim().length === 0) {
         return
       }
-      this.todos.push({
+      this.$store.commit('addTodo', {
         id: this.idForTodo,
-        title: this.newTodo,
-        completed: false
+        title: this.newTodo
       })
       this.newTodo = ''
       this.idForTodo++
-    },
-    removeTodo (index) {
-      this.todos.splice(index, 1)
-    },
-    editTodo (todo) {
-      this.oldTitle = todo.title
-      todo.editing = true
-    },
-    doneEdit (todo) {
-      if (todo.title.trim().length === 0) {
-        todo.title = this.oldTitle
-      }
-      todo.editing = false
-    },
-    cancelEdit (todo) {
-      todo.title = this.oldTitle
-      todo.editing = false
-    },
-    checkAllTodos () {
-      this.todos.forEach((todo) => (todo.completed = event.target.checked))
-    },
-    clearCompleted () {
-      this.todos = this.todos.filter(todo => !todo.completed)
     }
   }
 }
@@ -174,6 +102,11 @@ export default {
 .todo-item-left {
   display: flex;
   align-items: center;
+}
+.todo-item-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .todo-item-label {
   padding: 10px;
